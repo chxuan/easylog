@@ -4,7 +4,7 @@
 日期:2018-06-22
 作者:chxuan <787280310@qq.com>
 */
-#include <iostream>
+#include <stdio.h>
 #include <atomic>
 #include "utility.h"
 #include "format.h"
@@ -36,6 +36,10 @@ public:
     inline void write(const std::string& text);
 
 private:
+    // 写文件
+    inline void write_to_file(const std::string& text);
+
+private:
     std::string dir_;
     std::string level_;
     std::atomic<bool> is_opened_ {false};
@@ -44,9 +48,10 @@ private:
 
 void file_proxy::write(const std::string& text)
 {
+    printf("%s", text.c_str());
     if (is_opened_)
     {
-
+        write_to_file(text);
     }
     else
     {
@@ -60,15 +65,28 @@ void file_proxy::write(const std::string& text)
         fd_ = open(file_name.c_str(), O_CREAT | O_RDWR | O_APPEND | O_SYNC, 0664);
         if (fd_ != -1)
         {
+            is_opened_ = true;
+
+            ::remove(link_file.c_str());
             if (symlink(base_name.c_str(), link_file.c_str()) == -1)
             {
-                std::cout << "Create link file failed, link file:" << link_file << std::endl;
+                printf("创建链接文件失败:%s\n", link_file.c_str());
             }
+
+            write_to_file(text);
         }
         else
         {
-            std::cout << "Open file faield, file name:" << file_name << std::endl;
+            printf("打开文件失败:%s\n", file_name.c_str());
         }
+    }
+}
+
+void file_proxy::write_to_file(const std::string& text)
+{
+    if (::write(fd_, text.c_str(), text.length()) == -1)
+    {
+        printf("写文件失败:%s\n", text.c_str());
     }
 }
 
@@ -83,11 +101,11 @@ public:
     void set_log_level(log_level level) { level_ = level; }
     // 输出日志
     template<typename... Args>
-        inline void log(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args);
+    inline void log(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args);
 
 private:
     easylog() : all_proxy_(log_dir_, "ALL"), warn_proxy_(log_dir_, "WARN"), 
-    error_proxy_(log_dir_, "ERROR"), fatal_proxy_(log_dir_, "FATAL") {}
+                error_proxy_(log_dir_, "ERROR"), fatal_proxy_(log_dir_, "FATAL") {}
     ~easylog() {}
 
     // 判断是否输出日志
@@ -109,7 +127,7 @@ private:
     file_proxy fatal_proxy_;
 };
 
-    template<typename... Args>
+template<typename... Args>
 void easylog::log(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args)
 {
     if (is_logged(level))
@@ -131,6 +149,7 @@ std::string easylog::create_log_text(log_level level, const char* file_name, uns
     text += std::to_string(line);
     text += "] ";
     text += content;
+    text += "\n";
 
     return text;
 }

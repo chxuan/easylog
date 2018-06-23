@@ -11,7 +11,6 @@
 #include <fcntl.h>
 #include <libgen.h>
 #include <string>
-#include <iostream>
 
 // 获得当前可执行文件名
 inline std::string get_current_exe_name()
