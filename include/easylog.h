@@ -4,10 +4,9 @@
 日期:2018-06-22
 作者:chxuan <787280310@qq.com>
 */
-#include <unistd.h>
-#include <sys/time.h>
-#include <libgen.h>
 #include <iostream>
+#include <atomic>
+#include "utility.h"
 #include "format.h"
 
 enum class log_level
@@ -21,49 +20,56 @@ enum class log_level
     fatal
 };
 
-// 获得当前可执行文件名
-inline std::string get_current_exe_name()
-{
-    char buf[1024] = {'\0'};
-
-    if (readlink("/proc/self/exe", buf, sizeof(buf)) != -1)
-    {
-        return basename(buf);
-    }
-
-    return "";
-}
-
-// 获取当前时间,精确到毫秒 2018-06-23 16:39:50.131
-inline std::string get_current_time_ms()
-{
-    struct timeval now_tv;
-    gettimeofday(&now_tv, nullptr);
-
-    struct tm t;
-    localtime_r(&now_tv.tv_sec, &t);
-
-    char str[24] = {"\0"};
-    snprintf(str, sizeof(str), "%04d-%02d-%02d %02d:%02d:%02d.%03d", 
-             t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, 
-             t.tm_sec, static_cast<int>(now_tv.tv_usec / 1000));
-
-    return str;
-}
-
 class file_proxy
 {
 public:
+    file_proxy(const std::string& dir, const std::string& level) : dir_(dir), level_(level) {}
+    ~file_proxy()
+    {
+        if (fd_ != -1)
+        {
+            close(fd_);
+        }
+    }
+
     // 写文件
     inline void write(const std::string& text);
 
 private:
-
+    std::string dir_;
+    std::string level_;
+    std::atomic<bool> is_opened_ {false};
+    int fd_ = -1;
 };
 
 void file_proxy::write(const std::string& text)
 {
-    std::cout << text << std::endl;
+    if (is_opened_)
+    {
+
+    }
+    else
+    {
+        std::string exe_name = get_current_exe_name();
+        std::string link_file = dir_ + "/" + exe_name + "." + level_;
+
+        std::string time_ms = get_current_time_ms();
+        std::string base_name = exe_name + "." + level_ + "_" + time_ms;
+        std::string file_name = dir_ + "/" + base_name;
+
+        fd_ = open(file_name.c_str(), O_CREAT | O_RDWR | O_APPEND | O_SYNC, 0664);
+        if (fd_ != -1)
+        {
+            if (symlink(base_name.c_str(), link_file.c_str()) == -1)
+            {
+                std::cout << "Create link file failed, link file:" << link_file << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << "Open file faield, file name:" << file_name << std::endl;
+        }
+    }
 }
 
 class easylog
@@ -72,15 +78,16 @@ public:
     // 获取单例对象
     static easylog& get() { static easylog inst; return inst; }
     // 设置日志输出目录
-    void set_log_dir(const std::string& dir) { log_dir_ = dir; }
+    void set_log_dir(const std::string& dir) { log_dir_ = dir; mkdir(dir); }
     // 设置日志输出等级
     void set_log_level(log_level level) { level_ = level; }
     // 输出日志
     template<typename... Args>
-    inline void log(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args);
+        inline void log(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args);
 
 private:
-    easylog() { exe_name_ = get_current_exe_name().c_str(); }
+    easylog() : all_proxy_(log_dir_, "ALL"), warn_proxy_(log_dir_, "WARN"), 
+    error_proxy_(log_dir_, "ERROR"), fatal_proxy_(log_dir_, "FATAL") {}
     ~easylog() {}
 
     // 判断是否输出日志
@@ -95,7 +102,6 @@ private:
 private:
     std::string log_dir_ = "./log";
     log_level level_ = log_level::all;
-    std::string exe_name_;
 
     file_proxy all_proxy_;
     file_proxy warn_proxy_;
@@ -103,7 +109,7 @@ private:
     file_proxy fatal_proxy_;
 };
 
-template<typename... Args>
+    template<typename... Args>
 void easylog::log(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args)
 {
     if (is_logged(level))
