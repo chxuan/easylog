@@ -51,13 +51,20 @@ inline std::string get_current_time_ms()
     return str;
 }
 
-class file_io
+class file_proxy
 {
 public:
+    // 写文件
+    inline void write(const std::string& text);
 
 private:
 
 };
+
+void file_proxy::write(const std::string& text)
+{
+    std::cout << text << std::endl;
+}
 
 class easylog
 {
@@ -68,24 +75,32 @@ public:
     void set_log_dir(const std::string& dir) { log_dir_ = dir; }
     // 设置日志输出等级
     void set_log_level(log_level level) { level_ = level; }
-    // 判断是否输出日志
-    bool is_logged(log_level level) { return level >= level_; }
     // 输出日志
     template<typename... Args>
     inline void log(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args);
-    // 将日志等级转换成字符串
-    inline const char* to_string(log_level level);
-    // 创建日志文本
-    inline std::string create_log_text(log_level level, const char* file_name, unsigned long line, const std::string& content);
 
 private:
     easylog() { exe_name_ = get_current_exe_name().c_str(); }
     ~easylog() {}
 
+    // 判断是否输出日志
+    bool is_logged(log_level level) { return level >= level_; }
+    // 创建日志文本
+    inline std::string create_log_text(log_level level, const char* file_name, unsigned long line, const std::string& content);
+    // 将日志等级转换成字符串
+    inline const char* to_string(log_level level);
+    // 写到日志文件
+    inline void write_log_file(log_level level, const std::string& text);
+
 private:
     std::string log_dir_ = "./log";
-    log_level level_ = log_level::debug;
+    log_level level_ = log_level::all;
     std::string exe_name_;
+
+    file_proxy all_proxy_;
+    file_proxy warn_proxy_;
+    file_proxy error_proxy_;
+    file_proxy fatal_proxy_;
 };
 
 template<typename... Args>
@@ -94,7 +109,7 @@ void easylog::log(log_level level, const char* file_name, unsigned long line, co
     if (is_logged(level))
     {
         std::string text = create_log_text(level, file_name, line, format(fmt, std::forward<Args>(args)...));
-        std::cout << text << std::endl;
+        write_log_file(level, text);
     }
 }
 
@@ -127,6 +142,24 @@ const char* easylog::to_string(log_level level)
     case log_level::fatal: return "F";
     default: return "U";
     }
+}
+
+void easylog::write_log_file(log_level level, const std::string& text)
+{
+    if (level == log_level::warn)
+    {
+        warn_proxy_.write(text);
+    }
+    else if (level == log_level::error)
+    {
+        error_proxy_.write(text);
+    }
+    else if (level == log_level::fatal)
+    {
+        fatal_proxy_.write(text);
+    }
+
+    all_proxy_.write(text);
 }
 
 #define FILE_LINE basename(const_cast<char*>(__FILE__)), __LINE__
