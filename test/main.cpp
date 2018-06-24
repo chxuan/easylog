@@ -1,18 +1,30 @@
 #include "include/easylog.h"
 #include "clock_timer.h"
+#include <thread>
 #include <iostream>
+
+void log_test()
+{
+    clock_timer timer;
+    for (int i = 1; i <= 1000000; ++i)
+    {
+        /* log_file_debug("12345678901234567890123456789012345678901234567890123456789012345678901234567890name:{}--age:{}", "chxuan", 3.124); */
+        log_file_debug("hello world");
+    }
+
+    std::cout << "线程:" << std::this_thread::get_id() << ", 耗时:" << timer.elapsed() << "ms" << std::endl;
+}
 
 int main()
 {
     init_easylog("./log", log_level::all, 100 * 1024 * 1024);
 
-    clock_timer timer;
-    for (int i = 1; i <= 1000000; ++i)
-    {
-        log_file_debug("12345678901234567890123456789012345678901234567890123456789012345678901234567890name:{}--age:{}", "chxuan", 3.124);
-    }
+    log_test();
+    /* std::thread t1([]{ log_test(); }); */
+    /* std::thread t2([]{ log_test(); }); */
 
-    std::cout << "耗时:" << timer.elapsed() << "ms" << std::endl;
+    /* t1.join(); */
+    /* t2.join(); */
 
     /* log_trace("name:{}--age:{}", name, age); */
     /* log_debug("name:{}--age:{}", name, age); */
