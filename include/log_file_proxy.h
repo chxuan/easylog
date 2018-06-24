@@ -11,71 +11,62 @@
 class log_file_proxy
 {
 public:
-    log_file_proxy(const std::string& dir, const std::string& level) : dir_(dir), level_(level) 
-    {
-        exe_name_ = get_current_exe_name();
-        link_file_ = dir_ + "/" + exe_name_ + "." + level_;
-    }
+    ~log_file_proxy() { if (fd_ != -1) { close(fd_); } }
 
-    ~log_file_proxy()
-    {
-        if (fd_ != -1)
-        {
-            close(fd_);
-        }
-    }
-
-    // 写文件
+    // 初始化日志文件
+    inline void init_log_file(const std::string& output_dir, const std::string& level, unsigned long long max_file_size);
+    // 写日志
     inline void write_log(const std::string& log);
 
 private:
     // 打开文件
-    inline bool open_file();
+    inline bool open_file(const std::string& time_ms);
+    // 创建软链接
+    inline void create_link(const std::string& time_ms);
     // 写文件
-    inline void write_to_file(const std::string& log);
+    inline void write_file(const std::string& log);
 
 private:
-    std::string dir_;
-    std::string level_;
-    std::string exe_name_;
-    std::string link_file_;
+    std::string file_name_;
+    std::string file_name_with_dir_;
+    unsigned long long max_file_size_;
+    std::atomic<unsigned long long> curr_file_size_ {0};
     std::atomic<bool> is_opened_ {false};
     int fd_ = -1;
 };
 
+void log_file_proxy::init_log_file(const std::string& output_dir, const std::string& level, unsigned long long max_file_size)
+{
+    max_file_size_ = max_file_size;
+    file_name_ = get_current_exe_name() + "." + level;
+    file_name_with_dir_ = output_dir + "/" + file_name_;
+}
+
 void log_file_proxy::write_log(const std::string& log)
 {
-    printf("%s", log.c_str());
-
     if (is_opened_)
     {
-        write_to_file(log);
+        write_file(log);
     }
     else
     {
-        if (open_file())
+        std::string time_ms = get_current_time_ms();
+        if (open_file(time_ms))
         {
-            write_to_file(log);
+            create_link(time_ms);
+            write_file(log);
         }
     }
 }
 
-bool log_file_proxy::open_file()
+bool log_file_proxy::open_file(const std::string& time_ms)
 {
-    std::string base_name = exe_name_ + "." + level_ + "_" + get_current_time_ms();
-    std::string file_name = dir_ + "/" + base_name;
+    std::string file_name = file_name_with_dir_ + "_" + time_ms;
 
-    fd_ = open(file_name.c_str(), O_CREAT | O_RDWR | O_APPEND | O_SYNC, 0664);
+    fd_ = open(file_name.c_str(), O_CREAT | O_RDWR | O_APPEND, 0664);
     if (fd_ != -1)
     {
         is_opened_ = true;
-
-        ::remove(link_file_.c_str());
-        if (symlink(base_name.c_str(), link_file_.c_str()) == -1)
-        {
-            printf("写日志时，创建链接文件失败:%s\n", link_file_.c_str());
-        }
-
         return true;
     }
 
@@ -84,9 +75,25 @@ bool log_file_proxy::open_file()
     return false;
 }
 
-void log_file_proxy::write_to_file(const std::string& log)
+void log_file_proxy::create_link(const std::string& time_ms)
 {
-    if (::write(fd_, log.c_str(), log.length()) == -1)
+    std::string log_file = file_name_ + "_" + time_ms;
+
+    remove(file_name_with_dir_.c_str());
+    if (symlink(log_file.c_str(), file_name_with_dir_.c_str()) == -1)
+    {
+        printf("写日志时，创建链接文件失败:%s\n", file_name_with_dir_.c_str());
+    }
+}
+
+void log_file_proxy::write_file(const std::string& log)
+{
+    int size = write(fd_, log.c_str(), log.length());
+    if (size != -1)
+    {
+        curr_file_size_ += size;
+    }
+    else
     {
         printf("写日志到文件失败:%s\n", log.c_str());
     }

@@ -7,35 +7,30 @@
 #include "log_file_proxy.h"
 #include "format.h"
 
-enum class log_level
-{
-    all = 0,
-    trace,
-    debug,
-    info,
-    warn,
-    error,
-    fatal
-};
+// 日志等级
+enum class log_level { all = 0, trace, debug, info, warn, error, fatal };
 
 class easylog
 {
 public:
     // 获取单例对象
     static easylog& get() { static easylog inst; return inst; }
-    // 设置日志输出目录
-    void set_log_dir(const std::string& dir) { log_dir_ = dir; mkdir(dir); }
-    // 设置日志输出等级
-    void set_log_level(log_level level) { level_ = level; }
-    // 设置日志文件大小
-    void set_log_file_size(unsigned long long file_size) { file_size_ = file_size; }
-    // 输出日志
+    // 初始化easylog
+    inline void init_easylog(const std::string& output_dir, log_level level, unsigned long long max_file_size);
+    // 动态更改日志等级
+    void modify_log_level(log_level level) { level_ = level; }
+    // 输出日志到控制台和文件
     template<typename... Args>
     inline void log(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args);
+    // 输出日志到文件
+    template<typename... Args>
+    inline void log_file(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args);
+    // 输出日志到控制台
+    template<typename... Args>
+    inline void log_console(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args);
 
 private:
-    easylog() : all_proxy_(log_dir_, "ALL"), warn_proxy_(log_dir_, "WARN"), 
-                error_proxy_(log_dir_, "ERROR"), fatal_proxy_(log_dir_, "FATAL") {}
+    easylog() {}
     ~easylog() {}
 
     // 判断是否输出日志
@@ -45,18 +40,28 @@ private:
     // 将日志等级转换成字符串
     inline const char* to_string(log_level level);
     // 写到日志文件
-    inline void write_log(log_level level, const std::string& log);
+    inline void write_console(log_level level, const std::string& log);
+    // 写到日志文件
+    inline void write_file(log_level level, const std::string& log);
 
 private:
-    std::string log_dir_ = "./log";
-    log_level level_ = log_level::all;
-    unsigned long long file_size_ = 100 * 1024 * 1024; // 100MB
-
+    log_level level_;
     log_file_proxy all_proxy_;
     log_file_proxy warn_proxy_;
     log_file_proxy error_proxy_;
     log_file_proxy fatal_proxy_;
 };
+
+void easylog::init_easylog(const std::string& output_dir, log_level level, unsigned long long max_file_size)
+{
+    mkdir(output_dir);
+    level_ = level;
+
+    all_proxy_.init_log_file(output_dir, "ALL", max_file_size);
+    warn_proxy_.init_log_file(output_dir, "WARN", max_file_size);
+    error_proxy_.init_log_file(output_dir, "ERROR", max_file_size);
+    fatal_proxy_.init_log_file(output_dir, "FATAL", max_file_size);
+}
 
 template<typename... Args>
 void easylog::log(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args)
@@ -64,7 +69,28 @@ void easylog::log(log_level level, const char* file_name, unsigned long line, co
     if (is_logged(level))
     {
         std::string log = create_log(level, file_name, line, format(fmt, std::forward<Args>(args)...));
-        write_log(level, log);
+        write_console(level, log);
+        write_file(level, log);
+    }
+}
+
+template<typename... Args>
+void easylog::log_file(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args)
+{
+    if (is_logged(level))
+    {
+        std::string log = create_log(level, file_name, line, format(fmt, std::forward<Args>(args)...));
+        write_file(level, log);
+    }
+}
+
+template<typename... Args>
+void easylog::log_console(log_level level, const char* file_name, unsigned long line, const char* fmt, Args&&... args)
+{
+    if (is_logged(level))
+    {
+        std::string log = create_log(level, file_name, line, format(fmt, std::forward<Args>(args)...));
+        write_console(level, log);
     }
 }
 
@@ -99,7 +125,18 @@ const char* easylog::to_string(log_level level)
     }
 }
 
-void easylog::write_log(log_level level, const std::string& log)
+void easylog::write_console(log_level level, const std::string& log)
+{
+    switch (level)
+    {
+    case log_level::warn: printf("\033[1;33m%s\033[0m", log.c_str()); break;
+    case log_level::error: printf("\033[1;31m%s\033[0m", log.c_str()); break;
+    case log_level::fatal: printf("\033[1;35m%s\033[0m", log.c_str()); break;
+    default: printf("%s", log.c_str()); break;
+    }
+}
+
+void easylog::write_file(log_level level, const std::string& log)
 {
     if (level == log_level::warn)
     {
@@ -119,10 +156,12 @@ void easylog::write_log(log_level level, const std::string& log)
 
 #define FILE_LINE basename(const_cast<char*>(__FILE__)), __LINE__
 
-#define set_log_dir(dir) easylog::get().set_log_dir(dir)
-#define set_log_level(level) easylog::get().set_log_level(level)
-#define set_log_file_size(file_size) easylog::get().set_log_file_size(file_size)
+// 初始化easylog
+#define init_easylog(output_dir, level, max_file_size) easylog::get().init_easylog(output_dir, level, max_file_size)
+// 动态更改日志等级
+#define modify_log_level(level) easylog::get().modify_log_level(level)
 
+// 输出日志到控制台和文件
 #define log_all(...) easylog::get().log(log_level::all, FILE_LINE, __VA_ARGS__)
 #define log_trace(...) easylog::get().log(log_level::trace, FILE_LINE, __VA_ARGS__)
 #define log_debug(...) easylog::get().log(log_level::debug, FILE_LINE, __VA_ARGS__)
@@ -130,3 +169,22 @@ void easylog::write_log(log_level level, const std::string& log)
 #define log_warn(...) easylog::get().log(log_level::warn, FILE_LINE, __VA_ARGS__)
 #define log_error(...) easylog::get().log(log_level::error, FILE_LINE, __VA_ARGS__)
 #define log_fatal(...) easylog::get().log(log_level::fatal, FILE_LINE, __VA_ARGS__)
+
+// 输出日志到控制台
+#define log_console_all(...) easylog::get().log_console(log_level::all, FILE_LINE, __VA_ARGS__)
+#define log_console_trace(...) easylog::get().log_console(log_level::trace, FILE_LINE, __VA_ARGS__)
+#define log_console_debug(...) easylog::get().log_console(log_level::debug, FILE_LINE, __VA_ARGS__)
+#define log_console_info(...) easylog::get().log_console(log_level::info, FILE_LINE, __VA_ARGS__)
+#define log_console_warn(...) easylog::get().log_console(log_level::warn, FILE_LINE, __VA_ARGS__)
+#define log_console_error(...) easylog::get().log_console(log_level::error, FILE_LINE, __VA_ARGS__)
+#define log_console_fatal(...) easylog::get().log_console(log_level::fatal, FILE_LINE, __VA_ARGS__)
+
+// 输出日志到文件
+#define log_file_all(...) easylog::get().log_file(log_level::all, FILE_LINE, __VA_ARGS__)
+#define log_file_trace(...) easylog::get().log_file(log_level::trace, FILE_LINE, __VA_ARGS__)
+#define log_file_debug(...) easylog::get().log_file(log_level::debug, FILE_LINE, __VA_ARGS__)
+#define log_file_info(...) easylog::get().log_file(log_level::info, FILE_LINE, __VA_ARGS__)
+#define log_file_warn(...) easylog::get().log_file(log_level::warn, FILE_LINE, __VA_ARGS__)
+#define log_file_error(...) easylog::get().log_file(log_level::error, FILE_LINE, __VA_ARGS__)
+#define log_file_fatal(...) easylog::get().log_file(log_level::fatal, FILE_LINE, __VA_ARGS__)
+
