@@ -137,7 +137,7 @@ void log_file_proxy::write_file(const std::string& log)
     }
     else
     {
-        printf("写日志到文件失败, 线程id:%lu, 错误原因:%s, 日志内容:%s\n", pthread_self(), strerror(errno), log.c_str());
+        printf("写日志到文件失败, fd:%d, 线程id:%lu, 错误原因:%s, 日志内容:%s\n", fd_, pthread_self(), strerror(errno), log.c_str());
     }
 }
 
