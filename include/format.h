@@ -34,6 +34,11 @@ get_arg_by_index(Tuple& tp, std::size_t index)
 template<typename... Args>
 inline std::string format(const char* str, Args&&... args)
 {
+    if (sizeof...(args) == 0)
+    {
+        return str;
+    }
+
     std::string buf;
     auto tp = std::tuple<Args...>(args...);
     char* curr = const_cast<char*>(str);
