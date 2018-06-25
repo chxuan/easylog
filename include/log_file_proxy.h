@@ -24,8 +24,6 @@ public:
 private:
     // 创建文件
     inline void create_file();
-    // 打开文件
-    inline bool open_file(const std::string& time_ms);
     // 创建软链接
     inline void create_link(const std::string& time_ms);
     // 写文件
@@ -76,31 +74,24 @@ void log_file_proxy::write_log(const std::string& log)
 
 void log_file_proxy::create_file()
 {
-    int last_fd = fd_;
     std::string time_ms = get_current_time_ms();
-    if (open_file(time_ms))
-    {
-        close_file(last_fd);
-        create_link(time_ms);
-    }
-}
-
-bool log_file_proxy::open_file(const std::string& time_ms)
-{
     std::string file_name = file_name_with_dir_ + "_" + time_ms;
 
+    int last_fd = fd_;
     int fd = open(file_name.c_str(), O_CREAT | O_EXCL | O_RDWR | O_APPEND, 0664);
     if (fd > 0)
     {
         fd_ = fd;
         curr_file_size_ = 0;
         printf("打开日志文件成功, fd:%d, 线程id:%lu, 文件名:%s\n", fd_.load(), pthread_self(), time_ms.c_str());
-        return true;
+
+        close_file(last_fd);
+        create_link(time_ms);
     }
-
-    printf("打开日志文件失败, fd:%d, 线程id:%lu, 错误原因:%s, 文件名:%s\n", fd, pthread_self(), strerror(errno), file_name.c_str());
-
-    return false;
+    else
+    {
+        printf("打开日志文件失败, fd:%d, 线程id:%lu, 错误原因:%s, 文件名:%s\n", fd, pthread_self(), strerror(errno), file_name.c_str());
+    }
 }
 
 void log_file_proxy::create_link(const std::string& time_ms)
