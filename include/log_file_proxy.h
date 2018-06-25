@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <atomic>
+#include <mutex>
 #include "utility.h"
 
 class log_file_proxy
@@ -39,7 +40,8 @@ private:
     std::string file_name_with_dir_;
     unsigned long long max_file_size_;
     std::atomic<unsigned long long> curr_file_size_ {0};
-    int fd_ = -1;
+    std::atomic<int> fd_ {-1};
+    std::mutex mt_;
 };
 
 void log_file_proxy::init_log_file(const std::string& output_dir, const std::string& level, unsigned long long max_file_size)
@@ -51,37 +53,25 @@ void log_file_proxy::init_log_file(const std::string& output_dir, const std::str
 
 void log_file_proxy::write_log(const std::string& log)
 {
-    if (is_opened())
+    if (!is_opened())
     {
-        if (curr_file_size_ < max_file_size_)
-        {
-            write_file(log);
-        }
-        else
+        std::lock_guard<std::mutex> lock(mt_);
+        if (!is_opened())
         {
             create_file();
-            if (is_opened())
-            {
-                write_file(log);
-            }
-            else
-            {
-                printf("写日志时候, 遇到没有打开的文件, fd:%d, 线程id:%lu\n", fd_, pthread_self());
-            }
         }
     }
-    else
+
+    if (curr_file_size_ >= max_file_size_)
     {
-        create_file();
-        if (is_opened())
+        std::unique_lock<std::mutex> lock(mt_, std::defer_lock);
+        if (lock.try_lock())
         {
-            write_file(log);
-        }
-        else
-        {
-            printf("写日志时候, 遇到没有打开的文件, fd:%d, 线程id:%lu\n", fd_, pthread_self());
+            create_file();
         }
     }
+
+    write_file(log);
 }
 
 void log_file_proxy::create_file()
@@ -104,7 +94,7 @@ bool log_file_proxy::open_file(const std::string& time_ms)
     {
         fd_ = fd;
         curr_file_size_ = 0;
-        printf("打开日志文件成功, fd:%d, 线程id:%lu, 文件名:%s\n", fd_, pthread_self(), time_ms.c_str());
+        printf("打开日志文件成功, fd:%d, 线程id:%lu, 文件名:%s\n", fd_.load(), pthread_self(), time_ms.c_str());
         return true;
     }
 
@@ -137,7 +127,7 @@ void log_file_proxy::write_file(const std::string& log)
     }
     else
     {
-        printf("写日志到文件失败, fd:%d, 线程id:%lu, 错误原因:%s, 日志内容:%s\n", fd_, pthread_self(), strerror(errno), log.c_str());
+        printf("写日志到文件失败, fd:%d, 线程id:%lu, 错误原因:%s, 日志内容:%s\n", fd_.load(), pthread_self(), strerror(errno), log.c_str());
     }
 }
 
