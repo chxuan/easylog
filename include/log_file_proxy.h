@@ -14,7 +14,7 @@
 class log_file_proxy
 {
 public:
-    ~log_file_proxy() { close_file(fd_); }
+    ~log_file_proxy() { close_file(); }
 
     // 初始化日志文件
     inline void init_log_file(const std::string& output_dir, const std::string& level, unsigned long long max_file_size);
@@ -23,22 +23,22 @@ public:
 
 private:
     // 创建文件
-    inline void create_file();
+    inline int create_file();
     // 创建软链接
     inline void create_link(const std::string& time_ms);
     // 写文件
     inline void write_file(const std::string& log);
+    // 关闭文件
+    inline void close_file();
     // 判断文件是否打开
     bool is_opened() { return fd_ > 0; }
-    // 关闭文件
-    void close_file(int fd) { if (fd > 0) { close(fd); printf("关闭文件成功, fd:%d, 线程id:%lu\n", fd, pthread_self()); } }
 
 private:
     std::string file_name_;
     std::string file_name_with_dir_;
     unsigned long long max_file_size_;
     std::atomic<unsigned long long> curr_file_size_ {0};
-    std::atomic<int> fd_ {-1};
+    int fd_ = -1;
     std::mutex mt_;
 };
 
@@ -56,7 +56,7 @@ void log_file_proxy::write_log(const std::string& log)
         std::lock_guard<std::mutex> lock(mt_);
         if (!is_opened())
         {
-            create_file();
+            fd_ = create_file();
         }
     }
 
@@ -65,33 +65,36 @@ void log_file_proxy::write_log(const std::string& log)
         std::unique_lock<std::mutex> lock(mt_, std::defer_lock);
         if (lock.try_lock())
         {
-            create_file();
+            int fd = create_file();
+            if (fd > 0)
+            {
+                dup2(fd, fd_);
+                close(fd);
+            }
         }
     }
 
     write_file(log);
 }
 
-void log_file_proxy::create_file()
+int log_file_proxy::create_file()
 {
     std::string time_ms = get_current_time_ms();
     std::string file_name = file_name_with_dir_ + "_" + time_ms;
 
-    int last_fd = fd_;
-    int fd = open(file_name.c_str(), O_CREAT | O_EXCL | O_RDWR | O_APPEND, 0664);
+    int fd = open(file_name.c_str(), O_CREAT | O_RDWR | O_APPEND, 0664);
     if (fd > 0)
     {
-        fd_ = fd;
         curr_file_size_ = 0;
-        printf("打开日志文件成功, fd:%d, 线程id:%lu, 文件名:%s\n", fd_.load(), pthread_self(), time_ms.c_str());
-
-        close_file(last_fd);
+        printf("打开日志文件成功, fd:%d, 线程id:%lu, 文件名:%s\n", fd, pthread_self(), time_ms.c_str());
         create_link(time_ms);
     }
     else
     {
         printf("打开日志文件失败, fd:%d, 线程id:%lu, 错误原因:%s, 文件名:%s\n", fd, pthread_self(), strerror(errno), file_name.c_str());
     }
+
+    return fd;
 }
 
 void log_file_proxy::create_link(const std::string& time_ms)
@@ -118,7 +121,16 @@ void log_file_proxy::write_file(const std::string& log)
     }
     else
     {
-        printf("写日志到文件失败, fd:%d, 线程id:%lu, 错误原因:%s, 日志内容:%s\n", fd_.load(), pthread_self(), strerror(errno), log.c_str());
+        printf("写日志到文件失败, fd:%d, 线程id:%lu, 错误原因:%s, 日志内容:%s\n", fd_, pthread_self(), strerror(errno), log.c_str());
     }
 }
 
+void log_file_proxy::close_file() 
+{ 
+    if (fd_ > 0) 
+    {
+        close(fd_);
+        printf("关闭文件成功, fd:%d, 线程id:%lu\n", fd_, pthread_self()); 
+        fd_ = -1; 
+    }
+}
