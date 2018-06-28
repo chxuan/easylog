@@ -1,4 +1,4 @@
-## An easy to use C++ log library
+# An easy to use C++ log library
 
 > easylog是采用C++开发的，使用方便的日志库。
 
