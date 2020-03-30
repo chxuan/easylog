@@ -14,16 +14,16 @@
     int main()
     {
         // 初始化easylog
-        init_easylog("./log", log_level::debug, 1024 * 1024 * 1024);
+        INIT_EASYLOG("./log", log_level::debug, 1024 * 1024 * 1024);
 
         // 输出日志到控制台和文件
-        log_info("name:{}, age:{}", "Jack", 20);
+        LOG_INFO("name:{}, age:{}", "Jack", 20);
 
         // 输出日志到控制台
-        log_console_debug("Current thread id:{}", std::this_thread::get_id());
+        LOG_CONSOLE_DEBUG("Current thread id:{}", std::this_thread::get_id());
 
         // 输出日志到文件
-        log_file_fatal("System error");
+        LOG_FILE_FATAL("System error");
 
         return 0;
     }

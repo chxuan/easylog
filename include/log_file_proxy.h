@@ -86,7 +86,7 @@ int log_file_proxy::create_file()
     if (fd > 0)
     {
         curr_file_size_ = 0;
-        printf("打开日志文件成功, fd:%d, 线程id:%lu, 文件名:%s\n", fd, pthread_self(), time_ms.c_str());
+        /* printf("打开日志文件成功, fd:%d, 线程id:%lu, 文件名:%s\n", fd, pthread_self(), time_ms.c_str()); */
         create_link(time_ms);
     }
     else
@@ -108,7 +108,7 @@ void log_file_proxy::create_link(const std::string& time_ms)
     }
     else
     {
-        printf("创建日志链接文件成功, 线程id:%lu, 日志文件:%s, 链接文件:%s\n", pthread_self(), log_file.c_str(), file_name_with_dir_.c_str());
+        /* printf("创建日志链接文件成功, 线程id:%lu, 日志文件:%s, 链接文件:%s\n", pthread_self(), log_file.c_str(), file_name_with_dir_.c_str()); */
     }
 }
 
@@ -130,7 +130,7 @@ void log_file_proxy::close_file()
     if (fd_ > 0) 
     {
         close(fd_);
-        printf("关闭文件成功, fd:%d, 线程id:%lu\n", fd_, pthread_self()); 
+        /* printf("关闭文件成功, fd:%d, 线程id:%lu\n", fd_, pthread_self()); */ 
         fd_ = -1; 
     }
 }

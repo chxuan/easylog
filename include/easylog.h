@@ -157,34 +157,34 @@ void easylog::write_file(log_level level, const std::string& log)
 #define FILE_LINE basename(const_cast<char*>(__FILE__)), __LINE__
 
 // 初始化easylog
-#define init_easylog(output_dir, level, max_file_size) easylog::get().init_easylog(output_dir, level, max_file_size)
+#define INIT_EASYLOG(output_dir, level, max_file_size) easylog::get().init_easylog(output_dir, level, max_file_size)
 // 动态更改日志等级
-#define modify_log_level(level) easylog::get().modify_log_level(level)
+#define MODIFY_LOG_LEVEL(level) easylog::get().modify_log_level(level)
 
 // 输出日志到控制台和文件
-#define log_all(...) easylog::get().log(log_level::all, FILE_LINE, __VA_ARGS__)
-#define log_trace(...) easylog::get().log(log_level::trace, FILE_LINE, __VA_ARGS__)
-#define log_debug(...) easylog::get().log(log_level::debug, FILE_LINE, __VA_ARGS__)
-#define log_info(...) easylog::get().log(log_level::info, FILE_LINE, __VA_ARGS__)
-#define log_warn(...) easylog::get().log(log_level::warn, FILE_LINE, __VA_ARGS__)
-#define log_error(...) easylog::get().log(log_level::error, FILE_LINE, __VA_ARGS__)
-#define log_fatal(...) easylog::get().log(log_level::fatal, FILE_LINE, __VA_ARGS__)
+#define LOG_ALL(...) easylog::get().log(log_level::all, FILE_LINE, __VA_ARGS__)
+#define LOG_TRACE(...) easylog::get().log(log_level::trace, FILE_LINE, __VA_ARGS__)
+#define LOG_DEBUG(...) easylog::get().log(log_level::debug, FILE_LINE, __VA_ARGS__)
+#define LOG_INFO(...) easylog::get().log(log_level::info, FILE_LINE, __VA_ARGS__)
+#define LOG_WARN(...) easylog::get().log(log_level::warn, FILE_LINE, __VA_ARGS__)
+#define LOG_ERROR(...) easylog::get().log(log_level::error, FILE_LINE, __VA_ARGS__)
+#define LOG_FATAL(...) easylog::get().log(log_level::fatal, FILE_LINE, __VA_ARGS__)
 
 // 输出日志到控制台
-#define log_console_all(...) easylog::get().log_console(log_level::all, FILE_LINE, __VA_ARGS__)
-#define log_console_trace(...) easylog::get().log_console(log_level::trace, FILE_LINE, __VA_ARGS__)
-#define log_console_debug(...) easylog::get().log_console(log_level::debug, FILE_LINE, __VA_ARGS__)
-#define log_console_info(...) easylog::get().log_console(log_level::info, FILE_LINE, __VA_ARGS__)
-#define log_console_warn(...) easylog::get().log_console(log_level::warn, FILE_LINE, __VA_ARGS__)
-#define log_console_error(...) easylog::get().log_console(log_level::error, FILE_LINE, __VA_ARGS__)
-#define log_console_fatal(...) easylog::get().log_console(log_level::fatal, FILE_LINE, __VA_ARGS__)
+#define LOG_CONSOLE_ALl(...) easylog::get().log_console(log_level::all, FILE_LINE, __VA_ARGS__)
+#define LOG_CONSOLE_TRACE(...) easylog::get().log_console(log_level::trace, FILE_LINE, __VA_ARGS__)
+#define LOG_CONSOLE_DEBUG(...) easylog::get().log_console(log_level::debug, FILE_LINE, __VA_ARGS__)
+#define LOG_CONSOLE_INFO(...) easylog::get().log_console(log_level::info, FILE_LINE, __VA_ARGS__)
+#define LOG_CONSOLE_WARN(...) easylog::get().log_console(log_level::warn, FILE_LINE, __VA_ARGS__)
+#define LOG_CONSOLE_ERROR(...) easylog::get().log_console(log_level::error, FILE_LINE, __VA_ARGS__)
+#define LOG_CONSOLE_FATAL(...) easylog::get().log_console(log_level::fatal, FILE_LINE, __VA_ARGS__)
 
 // 输出日志到文件
-#define log_file_all(...) easylog::get().log_file(log_level::all, FILE_LINE, __VA_ARGS__)
-#define log_file_trace(...) easylog::get().log_file(log_level::trace, FILE_LINE, __VA_ARGS__)
-#define log_file_debug(...) easylog::get().log_file(log_level::debug, FILE_LINE, __VA_ARGS__)
-#define log_file_info(...) easylog::get().log_file(log_level::info, FILE_LINE, __VA_ARGS__)
-#define log_file_warn(...) easylog::get().log_file(log_level::warn, FILE_LINE, __VA_ARGS__)
-#define log_file_error(...) easylog::get().log_file(log_level::error, FILE_LINE, __VA_ARGS__)
-#define log_file_fatal(...) easylog::get().log_file(log_level::fatal, FILE_LINE, __VA_ARGS__)
+#define LOG_FILE_ALL(...) easylog::get().log_file(log_level::all, FILE_LINE, __VA_ARGS__)
+#define LOG_FILE_TRACE(...) easylog::get().log_file(log_level::trace, FILE_LINE, __VA_ARGS__)
+#define LOG_FILE_DEBUG(...) easylog::get().log_file(log_level::debug, FILE_LINE, __VA_ARGS__)
+#define LOG_FILE_INFO(...) easylog::get().log_file(log_level::info, FILE_LINE, __VA_ARGS__)
+#define LOG_FILE_WARN(...) easylog::get().log_file(log_level::warn, FILE_LINE, __VA_ARGS__)
+#define LOG_FILE_ERROR(...) easylog::get().log_file(log_level::error, FILE_LINE, __VA_ARGS__)
+#define LOG_FILE_FATAL(...) easylog::get().log_file(log_level::fatal, FILE_LINE, __VA_ARGS__)
 
