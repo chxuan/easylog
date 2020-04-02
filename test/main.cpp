@@ -18,7 +18,7 @@ void log_test()
 
 int main()
 {
-    INIT_EASYLOG("./log", log_level::all, 100 * 1024 * 1024);
+    EASYLOG_INIT("./log", log_level::all, 100 * 1024 * 1024);
 
     /* std::thread t1([]{ log_test(); }); */
     /* std::thread t2([]{ log_test(); }); */

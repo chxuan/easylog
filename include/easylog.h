@@ -157,9 +157,9 @@ void easylog::write_file(log_level level, const std::string& log)
 #define FILE_LINE basename(const_cast<char*>(__FILE__)), __LINE__
 
 // 初始化easylog
-#define INIT_EASYLOG(output_dir, level, max_file_size) easylog::get().init_easylog(output_dir, level, max_file_size)
+#define EASYLOG_INIT(output_dir, level, max_file_size) easylog::get().init_easylog(output_dir, level, max_file_size)
 // 动态更改日志等级
-#define MODIFY_LOG_LEVEL(level) easylog::get().modify_log_level(level)
+#define EASYLOG_MODIFY_LOG_LEVEL(level) easylog::get().modify_log_level(level)
 
 // 输出日志到控制台和文件
 #define LOG_ALL(...) easylog::get().log(log_level::all, FILE_LINE, __VA_ARGS__)
